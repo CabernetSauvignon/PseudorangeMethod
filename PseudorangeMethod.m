@@ -1,7 +1,51 @@
 clear all;
 
-%% ------------------------------------------------------------------------
-c = 2.99792458e+08; % Скорость света в вакууме, [м/с]
+function receiverCoord = pseudorangeMethod(satellite, delayTime)
+
+  %% --------------------- Начальные параметры ---------------------------------
+  receiverCoord = [0; 0; 0; 0]; % Начальные координаты НАП и начальное расхождение времени (deltaTau) 
+  c = 2.99792458e+08; % Скорость света в вакууме, [м/с]
+
+  %%---------------------- Рассчёт псевдодальностей ----------------------------
+  P = delayTime .* c;  % вектор псевдодальностей исходя из времени задержки приёма сигнала
+
+  %%---------------------- ОСновной цикл ---------------------------------------
+  accuracy = 1;  % Значение точности текущего решения
+  while accuracy > 0.00000001
+    
+    %%------------------ Рассчёт оценок псевдодальностей -----------------------
+    % вектор псевдодальностей по МНК
+    circumflexP = sqrt((receiverCoord(1) .- satellite(:, 1)).^2  .+ 
+                       (receiverCoord(2) .- satellite(:, 2)).^2  .+ 
+                       (receiverCoord(3) .- satellite(:, 3)).^2) .+ satellite(:, 4) .* c;
+    deltaP = [P .- circumflexP];  % ошибки оценок псевдодальностей
+  
+    %%-------------- Рассчёт матрицы направляющих косинусов---------------------
+    % расстояния до навигационного спутника
+    R = sqrt((receiverCoord(1) .- satellite(:, 1)).^2  .+ 
+             (receiverCoord(2) .- satellite(:, 2)).^2  .+ 
+             (receiverCoord(3) .- satellite(:, 3)).^2);
+    H = [];   % матрица направляющих косинусов
+    H(:, 1) = (receiverCoord(1) .- satellite(:, 1)) ./ R(:);
+    H(:, 2) = (receiverCoord(2) .- satellite(:, 2)) ./ R(:);
+    H(:, 3) = (receiverCoord(3) .- satellite(:, 3)) ./ R(:);
+    H(:, 4) = 1;
+    
+    %%------------------- Коррекция текущего решения----------------------------
+    prevReceiverCoord = receiverCoord;  %Сохраняем предыдущее решение
+    % Оценка ошибки текущего решения
+    deltaNavigationReceiver = inv(transpose(H) * H) * transpose(H) * deltaP;
+    receiverCoord = receiverCoord + deltaNavigationReceiver;
+  
+  %% Проверка достижения точности
+  accuracy = sqrt((receiverCoord(1) - prevReceiverCoord(1)) ^ 2 + 
+         (receiverCoord(2) - prevReceiverCoord(2)) ^ 2 + 
+         (receiverCoord(3) - prevReceiverCoord(3)) ^ 2);
+  endwhile
+
+  receiverCoord = receiverCoord(1:3);
+end
+
 % ---------------------- Координаты НАП для проверки ----------------------
 X_nav_receiver = 2.757469638336251e+06; % координата навигационного приемника (НАП), [м]
 Y_nav_receiver = 1.616185590852821e+06; % координата навигационного приемника (НАП), [м]
@@ -67,106 +111,11 @@ deltaTau7 = 0.0; % расхождение шкал времени НАП с 18 �
 deltaTau8 = 0.0; % расхождение шкал времени НАП с 24 НС
 deltaTau = [deltaTau1; deltaTau2; deltaTau3; deltaTau4; deltaTau5; deltaTau6; deltaTau7; deltaTau8];
 %% ------------------------------------------------------------------------
+
 satelliteXYZdeltaTau = [satelliteXYZ deltaTau];
-%% ------------------------------------------------------------------------
-navigationReceiver = [0; 0; 0; 0]; % Начальные координаты НАП и начальное расхождение времени (deltaTau) 
-
-tic
-%%------Рассчёт псевдодальностей----
-P = tau .* c; % вектор псевдодальностей
-
-%% Основной цикл
-accuracy = 1;
-while accuracy > 0.00000001
-  %% Рассчёт оценок псевдодальностей  
-    LeastSquareP = sqrt((navigationReceiver(1) .- satelliteXYZdeltaTau(:, 1)).^2  .+ 
-                     (navigationReceiver(2) .- satelliteXYZdeltaTau(:, 2)).^2  .+ 
-                     (navigationReceiver(3) .- satelliteXYZdeltaTau(:, 3)).^2) .+ satelliteXYZdeltaTau(:, 4) .* c;
-
-  deltaP = [P .- LeastSquareP];
-  
-  %% Рассчёт матрицы направляющих косинусов
-    R = sqrt((navigationReceiver(1) .- satelliteXYZdeltaTau(:, 1)).^2  .+ 
-                (navigationReceiver(2) .- satelliteXYZdeltaTau(:, 2)).^2  .+ 
-                (navigationReceiver(3) .- satelliteXYZdeltaTau(:, 3)).^2);
-    H = [];
-    H(:, 1) = (navigationReceiver(1) .- satelliteXYZdeltaTau(:, 1)) ./ R(:);
-    H(:, 2) = (navigationReceiver(2) .- satelliteXYZdeltaTau(:, 2)) ./ R(:);
-    H(:, 3) = (navigationReceiver(3) .- satelliteXYZdeltaTau(:, 3)) ./ R(:);
-    H(:, 4) = 1;
-  
-  %% Коррекция текущего решения
-  deltaNavigationReceiver = inv(transpose(H) * H) * transpose(H) * deltaP;
-  previousNavigationReceiver = navigationReceiver;
-  navigationReceiver = navigationReceiver + deltaNavigationReceiver;
-  
-  %% Проверка достижения точности
-  accuracy = sqrt((navigationReceiver(1) - previousNavigationReceiver(1)) ^ 2 + 
-                  (navigationReceiver(2) - previousNavigationReceiver(2)) ^ 2 + 
-                  (navigationReceiver(3) - previousNavigationReceiver(3)) ^ 2);
-endwhile
 
 clc;
-toc
-disp("navigationReceiver"), disp(navigationReceiver)
-disp("accuracy"), disp(accuracy)
-disp("Рассчитанные координаты НАП"), disp(navigationReceiver(1:3))
+coords = pseudorangeMethod(satelliteXYZdeltaTau, tau);
+disp("Рассчитанные координаты НАП"), disp(coords(1:3))
 disp("Координаты НАП для проверки"), disp(X_nav_receiver), disp(Y_nav_receiver), disp(Z_nav_receiver)
-
-function receiverCoord = pseudorangeMethod(satellite, delayTime)
-
-
-  navigationReceiver = [0; 0; 0; 0]; % Начальные координаты НАП и начальное расхождение времени (deltaTau) 
-
-  %%------Рассчёт псевдодальностей----
-  P = []; % вектор псевдодальностей
-  for i = 1:8
-    P(1, i) = c * tau(i);
-  endfor
-
-  %% Основной цикл
-  accuracy = 1;
-  steps = 0;
-  while accuracy > 0.00000001
-    %% Рассчёт оценок псевдодальностей
-    [numRowsSatellite,numColsSatellite] = size(satelliteXYZdeltaTau);
-    LeastSquareP = [];
-    deltaP = [];
-    for i = 1:numRowsSatellite
-      LeastSquareP(i) = sqrt((navigationReceiver(1) - satelliteXYZdeltaTau(i, 1)).^2  + 
-                      (navigationReceiver(2) - satelliteXYZdeltaTau(i, 2)).^2  + 
-                      (navigationReceiver(3) - satelliteXYZdeltaTau(i, 3)).^2) + satelliteXYZdeltaTau(i, 4) .* c;
-    endfor
-
-    deltaP = [P .- LeastSquareP];
-  
-    %% Рассчёт матрицы направляющих косинусов
-    H = [];
-    R = [];
-    for i = 1:numRowsSatellite
-      R(i) = sqrt((navigationReceiver(1) - satelliteXYZdeltaTau(i, 1)).^2  + 
-                 (navigationReceiver(2) - satelliteXYZdeltaTau(i, 2)).^2  + 
-                 (navigationReceiver(3) - satelliteXYZdeltaTau(i, 3)).^2);
-                
-      H(i, 1) = (navigationReceiver(1) - satelliteXYZdeltaTau(i, 1)) / R(i);
-      H(i, 2) = (navigationReceiver(2) - satelliteXYZdeltaTau(i, 2)) / R(i);
-      H(i, 3) = (navigationReceiver(3) - satelliteXYZdeltaTau(i, 3)) / R(i);
-      H(i, 4) = 1;
-    endfor
-  
-    %% Коррекция текущего решения
-    %navigationReceiver = navigationReceiver + transpose(H) * transpose(deltaP);
-    deltaNavigationReceiver = inv(transpose(H) * H) * transpose(H) * transpose(deltaP);
-    previousNavigationReceiver = navigationReceiver;
-    navigationReceiver = navigationReceiver + deltaNavigationReceiver;
-  
-    %% Проверка достижения точности
-    accuracy = sqrt((navigationReceiver(1) - previousNavigationReceiver(1)) .^ 2 + 
-                    (navigationReceiver(2) - previousNavigationReceiver(2)) .^ 2 + 
-                    (navigationReceiver(3) - previousNavigationReceiver(3)) .^ 2);
-  
-    steps++
-  endwhile
-
-end
 
