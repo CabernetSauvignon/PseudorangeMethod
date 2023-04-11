@@ -1,5 +1,28 @@
 function receiverCoord = pseudorangeMethod(satellite, delayTime)
-
+  %%--------------------Проверка аргументов функции-----------------------------
+  %usage = strjoin({"Input satellite matrix must have 4 columns (x, y, z, deltaTau),",
+  %              "that means func need a number of satellite coords and", 
+  %              "divergence of time scales for each satellite.", 
+  %              "\nAlso this func requires at least 4 rows of arguments", 
+  %              "that means you need to input data about at least 4 satellites.",
+  %              "\n delayTime argument is signal acceptance delay time for each", 
+  %              "satellite. It must be a vector of arguments, which equals to", 
+  %              "number of satellite rows."});
+  
+  [satelliteRows, satelliteCols] = size(satellite);
+  if(satelliteCols != 4)
+    error("Wrong nuber of columns in satellite argument. Input satellite matrix must have 4 columns (x, y, z, deltaTau).");
+  endif
+  
+  if(satelliteRows < 4)
+    error("Wrong nuber of rows in satellite argument. Number must be equal or greater than 4");
+  endif
+  
+  [delayTimeRows, delayTimeCols] = size(delayTime);
+  if((delayTimeRows != satelliteRows) ||  delayTimeCols != 1)
+    error("Wrong nuber of rows in delayTime argument. Number of rows must be equal to satellite number of rows");
+  endif
+  
   %% --------------------- Начальные параметры ---------------------------------
   receiverCoord = [0; 0; 0; 0]; % Начальные координаты НАП и начальное расхождение времени (deltaTau) 
   c = 2.99792458e+08; % Скорость света в вакууме, [м/с]
@@ -9,7 +32,8 @@ function receiverCoord = pseudorangeMethod(satellite, delayTime)
 
   %%---------------------- Оcновной цикл ---------------------------------------
   accuracy = 1;  % Значение точности текущего решения
-  while accuracy > 0.00000001
+  accuracyRequired = 0.00000001;  % Требуемая точность
+  while accuracy > accuracyRequired
     
     %%------------------ Рассчёт оценок псевдодальностей -----------------------
     % вектор псевдодальностей по МНК
@@ -42,5 +66,5 @@ function receiverCoord = pseudorangeMethod(satellite, delayTime)
   endwhile
 
   receiverCoord = receiverCoord(1:3);
-end
+endfunction
 

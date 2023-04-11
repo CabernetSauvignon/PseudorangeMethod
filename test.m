@@ -64,11 +64,12 @@ deltaTau6 = 0.0; % расхождение шкал времени НАП с 17 �
 deltaTau7 = 0.0; % расхождение шкал времени НАП с 18 НС
 deltaTau8 = 0.0; % расхождение шкал времени НАП с 24 НС
 deltaTau = [deltaTau1; deltaTau2; deltaTau3; deltaTau4; deltaTau5; deltaTau6; deltaTau7; deltaTau8];
-%% ------------------------------------------------------------------------
+
+%% Вычисление координаты
 
 satelliteXYZdeltaTau = [satelliteXYZ deltaTau];
 
 clc;
 coords = pseudorangeMethod(satelliteXYZdeltaTau, tau);
-disp("Рассчитанные координаты НАП"), disp(coords(1:3))
+disp("Рассчитанные координаты НАП"), disp(coords)
 disp("Координаты НАП для проверки"), disp(X_nav_receiver), disp(Y_nav_receiver), disp(Z_nav_receiver)
