@@ -69,7 +69,8 @@ deltaTau = [deltaTau1; deltaTau2; deltaTau3; deltaTau4; deltaTau5; deltaTau6; de
 clc;
 satelliteXYZdeltaTau = [satelliteXYZ deltaTau];
 tic
-coords = pseudorangeMethod(satelliteXYZdeltaTau, tau);
+[receiverCoord, schet] = pseudorangeMethod(satelliteXYZdeltaTau, tau);
 toc
-disp("Рассчитанные координаты НАП"), disp(coords)
+disp("Рассчитанные координаты НАП"), disp(receiverCoord)
+disp("Количество шагов расчёта"), disp(schet)
 disp("Координаты НАП для проверки"), disp(X_nav_receiver), disp(Y_nav_receiver), disp(Z_nav_receiver)
